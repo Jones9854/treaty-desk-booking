@@ -24,8 +24,8 @@ A beautiful, modern desk booking and social activity platform built for Treaty S
 - **Office Integration**: See who's in the office on activity days
 
 ### 💾 Data Persistence
-- All data stored locally in your browser using localStorage
-- No backend required - works completely offline
+- **Backend Option**: Full-featured .NET API with MySQL database (see Backend Setup below)
+- **LocalStorage Option**: Store data locally in browser (no backend required)
 - Your bookings and activities persist across sessions
 
 ## 🚀 Getting Started
@@ -34,7 +34,7 @@ A beautiful, modern desk booking and social activity platform built for Treaty S
 - Node.js 18+ installed
 - npm or yarn package manager
 
-### Installation
+### Frontend Installation
 
 1. Clone the repository:
 ```bash
@@ -53,6 +53,59 @@ npm run dev
 ```
 
 4. Open your browser and navigate to `http://localhost:5173`
+
+### 🔧 Backend Setup (Optional but Recommended)
+
+The application includes a complete .NET 8 backend with MySQL database for persistent storage.
+
+#### Quick Backend Setup
+
+**Option 1: Automated Setup**
+```bash
+cd backend
+./setup.sh          # macOS/Linux
+# or
+.\setup.ps1         # Windows PowerShell
+```
+
+**Option 2: Manual Setup**
+```bash
+cd backend/TreatyDeskBooking.Api
+
+# Install EF Core tools
+dotnet tool install --global dotnet-ef
+
+# Create and apply database migration
+dotnet ef migrations add InitialCreate
+dotnet ef database update
+
+# Run the API
+dotnet run
+```
+
+**Option 3: Docker Setup**
+```bash
+cd backend
+docker-compose up -d
+cd TreatyDeskBooking.Api
+dotnet ef database update
+dotnet run
+```
+
+#### Backend Prerequisites
+- .NET 8 SDK
+- MySQL 8.0+ (or use Docker)
+
+#### Verify Backend
+- API: http://localhost:5000
+- Swagger UI: http://localhost:5000/swagger
+
+📚 **Detailed Backend Documentation:**
+- `backend/README.md` - Complete API documentation
+- `backend/QUICKSTART.md` - Quick reference
+- `backend/MIGRATION_GUIDE.md` - Database migration help
+- `BACKEND_INTEGRATION.md` - Frontend integration guide
+- `BACKEND_SUMMARY.md` - Implementation overview
 
 ## 📦 Building for Production
 
@@ -139,12 +192,19 @@ Update the weekly booking limit in the `DeskBooking` component logic.
 
 ## 🛠️ Tech Stack
 
+### Frontend
 - **Framework**: React 18 with TypeScript
 - **Build Tool**: Vite
 - **Styling**: TailwindCSS
 - **Icons**: Lucide React
 - **State Management**: React Hooks
-- **Storage**: LocalStorage API
+
+### Backend (Optional)
+- **API Framework**: .NET 8 Minimal API
+- **Database**: MySQL 8.0
+- **ORM**: Entity Framework Core 8.0
+- **Documentation**: Swagger/OpenAPI
+- **CORS**: Configured for frontend
 
 ## 📱 Features in Detail
 

@@ -1,6 +1,7 @@
 import { useState } from 'react';
 import { User, Booking } from '../types';
 import { Calendar, Users, CheckCircle, XCircle, AlertCircle } from 'lucide-react';
+import { bookingApi } from '../services/api';
 
 interface DeskBookingProps {
   currentUser: User;
@@ -12,15 +13,22 @@ const MAX_DESKS = 15;
 
 export default function DeskBooking({ currentUser, bookings, onBookingsChange }: DeskBookingProps) {
   const [message, setMessage] = useState<{ type: 'success' | 'error' | 'info'; text: string } | null>(null);
+  const [loading, setLoading] = useState(false);
 
-  // Get next 14 days
+  // Get next 14 weekdays (excluding weekends)
   const getNextDays = (count: number) => {
     const days = [];
     const today = new Date();
-    for (let i = 0; i < count; i++) {
+    let i = 0;
+    while (days.length < count) {
       const date = new Date(today);
       date.setDate(today.getDate() + i);
-      days.push(date);
+      const dayOfWeek = date.getDay();
+      // Only add weekdays (1-5, where 0 = Sunday, 6 = Saturday)
+      if (dayOfWeek !== 0 && dayOfWeek !== 6) {
+        days.push(date);
+      }
+      i++;
     }
     return days;
   };
@@ -48,7 +56,7 @@ export default function DeskBooking({ currentUser, bookings, onBookingsChange }:
     return bookings.some(b => b.userId === currentUser.id && b.date === date);
   };
 
-  const handleBookDesk = (date: string) => {
+  const handleBookDesk = async (date: string) => {
     const dateBookings = getBookingsForDate(date);
     
     if (hasUserBookedDate(date)) {
@@ -67,26 +75,81 @@ export default function DeskBooking({ currentUser, bookings, onBookingsChange }:
       return;
     }
 
-    const newBooking: Booking = {
-      id: Date.now().toString(),
-      userId: currentUser.id,
-      userName: currentUser.name,
-      date,
-      deskNumber: dateBookings.length + 1,
-    };
+    setLoading(true);
 
-    onBookingsChange([...bookings, newBooking]);
-    setMessage({ type: 'success', text: `Desk ${newBooking.deskNumber} booked successfully!` });
-    setTimeout(() => setMessage(null), 3000);
+    try {
+      // Try to create booking via API
+      const newBooking = await bookingApi.create({
+        userId: currentUser.id,
+        date,
+      });
+
+      // Update local state with API response
+      const updatedBookings = [...bookings, newBooking];
+      onBookingsChange(updatedBookings);
+      
+      // Also save to localStorage as backup
+      localStorage.setItem('bookings', JSON.stringify(updatedBookings));
+      
+      setMessage({ type: 'success', text: `Desk ${newBooking.deskNumber} booked successfully!` });
+    } catch (error: any) {
+      // If API fails, create booking locally
+      console.error('Failed to book via API:', error);
+      
+      const localBooking: Booking = {
+        id: Date.now().toString(),
+        userId: currentUser.id,
+        userName: currentUser.name,
+        date,
+        deskNumber: dateBookings.length + 1,
+      };
+
+      const updatedBookings = [...bookings, localBooking];
+      onBookingsChange(updatedBookings);
+      localStorage.setItem('bookings', JSON.stringify(updatedBookings));
+      
+      setMessage({ 
+        type: 'error', 
+        text: error.message || 'Failed to save to server. Saved locally only.' 
+      });
+    } finally {
+      setLoading(false);
+      setTimeout(() => setMessage(null), 3000);
+    }
   };
 
-  const handleCancelBooking = (date: string) => {
-    const updatedBookings = bookings.filter(
-      b => !(b.userId === currentUser.id && b.date === date)
-    );
-    onBookingsChange(updatedBookings);
-    setMessage({ type: 'info', text: 'Booking cancelled successfully!' });
-    setTimeout(() => setMessage(null), 3000);
+  const handleCancelBooking = async (date: string) => {
+    setLoading(true);
+
+    try {
+      // Try to delete via API
+      await bookingApi.deleteByUserAndDate(currentUser.id, date);
+
+      // Update local state
+      const updatedBookings = bookings.filter(
+        b => !(b.userId === currentUser.id && b.date === date)
+      );
+      onBookingsChange(updatedBookings);
+      
+      // Update localStorage
+      localStorage.setItem('bookings', JSON.stringify(updatedBookings));
+      
+      setMessage({ type: 'info', text: 'Booking cancelled successfully!' });
+    } catch (error) {
+      console.error('Failed to cancel via API:', error);
+      
+      // If API fails, delete locally anyway
+      const updatedBookings = bookings.filter(
+        b => !(b.userId === currentUser.id && b.date === date)
+      );
+      onBookingsChange(updatedBookings);
+      localStorage.setItem('bookings', JSON.stringify(updatedBookings));
+      
+      setMessage({ type: 'info', text: 'Booking cancelled locally (server unavailable)' });
+    } finally {
+      setLoading(false);
+      setTimeout(() => setMessage(null), 3000);
+    }
   };
 
   const formatDate = (date: Date) => {
@@ -180,21 +243,22 @@ export default function DeskBooking({ currentUser, bookings, onBookingsChange }:
                 userBooked ? (
                   <button
                     onClick={() => handleCancelBooking(dateStr)}
-                    className="w-full py-2 px-4 bg-red-500 hover:bg-red-600 text-white font-semibold rounded-lg transition-colors"
+                    disabled={loading}
+                    className="w-full py-2 px-4 bg-red-500 hover:bg-red-600 text-white font-semibold rounded-lg transition-colors disabled:opacity-50 disabled:cursor-not-allowed"
                   >
-                    Cancel Booking
+                    {loading ? 'Cancelling...' : 'Cancel Booking'}
                   </button>
                 ) : (
                   <button
                     onClick={() => handleBookDesk(dateStr)}
-                    disabled={isFullyBooked || userWeeklyBookings >= 2}
+                    disabled={isFullyBooked || userWeeklyBookings >= 2 || loading}
                     className={`w-full py-2 px-4 font-semibold rounded-lg transition-colors ${
-                      isFullyBooked || userWeeklyBookings >= 2
+                      isFullyBooked || userWeeklyBookings >= 2 || loading
                         ? 'bg-gray-200 text-gray-400 cursor-not-allowed'
                         : 'bg-primary-600 hover:bg-primary-700 text-white'
                     }`}
                   >
-                    {isFullyBooked ? 'Fully Booked' : 'Book Desk'}
+                    {loading ? 'Booking...' : isFullyBooked ? 'Fully Booked' : 'Book Desk'}
                   </button>
                 )
               )}

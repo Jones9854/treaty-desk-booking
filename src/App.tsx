@@ -5,12 +5,14 @@ import Navigation from './components/Navigation';
 import DeskBooking from './components/DeskBooking';
 import SocialFeed from './components/SocialFeed';
 import { Users, Calendar } from 'lucide-react';
+import { bookingApi, activityApi } from './services/api';
 
 function App() {
   const [currentUser, setCurrentUser] = useState<User | null>(null);
   const [activeTab, setActiveTab] = useState<'bookings' | 'social'>('bookings');
   const [bookings, setBookings] = useState<Booking[]>([]);
   const [activities, setActivities] = useState<Activity[]>([]);
+  const [useApi, setUseApi] = useState(true);
 
   // Load data from localStorage on mount
   useEffect(() => {
@@ -28,6 +30,37 @@ function App() {
       setActivities(JSON.parse(savedActivities));
     }
   }, []);
+
+  // Load bookings from API when user logs in
+  useEffect(() => {
+    if (currentUser && useApi) {
+      loadBookingsFromApi();
+      loadActivitiesFromApi();
+    }
+  }, [currentUser, useApi]);
+
+  const loadBookingsFromApi = async () => {
+    try {
+      const apiBookings = await bookingApi.getAll();
+      setBookings(apiBookings);
+      localStorage.setItem('bookings', JSON.stringify(apiBookings));
+    } catch (error) {
+      console.error('Failed to load bookings from API:', error);
+      // Fall back to localStorage data (already loaded)
+      setUseApi(false);
+    }
+  };
+
+  const loadActivitiesFromApi = async () => {
+    try {
+      const apiActivities = await activityApi.getAll();
+      setActivities(apiActivities);
+      localStorage.setItem('activities', JSON.stringify(apiActivities));
+    } catch (error) {
+      console.error('Failed to load activities from API:', error);
+      // Fall back to localStorage data (already loaded)
+    }
+  };
 
   // Save bookings to localStorage when they change
   useEffect(() => {

@@ -1,6 +1,7 @@
 import { useState } from 'react';
 import { User } from '../types';
-import { Building2, Mail, User as UserIcon } from 'lucide-react';
+import { Building2, Mail, User as UserIcon, Loader2 } from 'lucide-react';
+import { userApi } from '../services/api';
 
 interface LoginScreenProps {
   onLogin: (user: User) => void;
@@ -9,16 +10,46 @@ interface LoginScreenProps {
 export default function LoginScreen({ onLogin }: LoginScreenProps) {
   const [name, setName] = useState('');
   const [email, setEmail] = useState('');
+  const [loading, setLoading] = useState(false);
+  const [error, setError] = useState<string | null>(null);
+  const [useLocalStorage, setUseLocalStorage] = useState(false);
 
-  const handleSubmit = (e: React.FormEvent) => {
+  const handleSubmit = async (e: React.FormEvent) => {
     e.preventDefault();
-    if (name.trim() && email.trim()) {
-      const user: User = {
-        id: Date.now().toString(),
-        name: name.trim(),
-        email: email.trim(),
-      };
-      onLogin(user);
+    if (!name.trim() || !email.trim()) return;
+
+    setLoading(true);
+    setError(null);
+
+    try {
+      // If using localStorage mode or API fails, create user locally
+      if (useLocalStorage) {
+        const user: User = {
+          id: Date.now().toString(),
+          name: name.trim(),
+          email: email.trim(),
+        };
+        onLogin(user);
+      } else {
+        // Try to find or create user via API
+        const user = await userApi.findOrCreate(name.trim(), email.trim());
+        onLogin(user);
+      }
+    } catch (err) {
+      console.error('Login error:', err);
+      setError('Unable to connect to server. Using local mode.');
+      
+      // Fallback to localStorage mode
+      setTimeout(() => {
+        const user: User = {
+          id: Date.now().toString(),
+          name: name.trim(),
+          email: email.trim(),
+        };
+        onLogin(user);
+      }, 1500);
+    } finally {
+      setLoading(false);
     }
   };
 
@@ -72,12 +103,38 @@ export default function LoginScreen({ onLogin }: LoginScreenProps) {
             </div>
           </div>
 
+          {error && (
+            <div className="p-3 bg-yellow-50 border border-yellow-200 rounded-lg">
+              <p className="text-sm text-yellow-800 text-center">{error}</p>
+            </div>
+          )}
+
           <button
             type="submit"
-            className="w-full bg-gradient-to-r from-primary-600 to-purple-600 text-white font-semibold py-3 px-6 rounded-lg hover:from-primary-700 hover:to-purple-700 transition-all transform hover:scale-105 shadow-lg"
+            disabled={loading}
+            className="w-full bg-gradient-to-r from-primary-600 to-purple-600 text-white font-semibold py-3 px-6 rounded-lg hover:from-primary-700 hover:to-purple-700 transition-all transform hover:scale-105 shadow-lg disabled:opacity-50 disabled:cursor-not-allowed disabled:transform-none flex items-center justify-center"
           >
-            Sign In
+            {loading ? (
+              <>
+                <Loader2 className="w-5 h-5 mr-2 animate-spin" />
+                Signing In...
+              </>
+            ) : (
+              'Sign In'
+            )}
           </button>
+
+          <div className="mt-4">
+            <label className="flex items-center justify-center space-x-2 cursor-pointer">
+              <input
+                type="checkbox"
+                checked={useLocalStorage}
+                onChange={(e) => setUseLocalStorage(e.target.checked)}
+                className="rounded border-gray-300 text-primary-600 focus:ring-primary-500"
+              />
+              <span className="text-sm text-gray-600">Use local storage only (offline mode)</span>
+            </label>
+          </div>
         </form>
 
         <div className="mt-8 p-4 bg-primary-50 rounded-lg">
