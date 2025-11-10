@@ -5,7 +5,7 @@
 ## Prerequisites
 
 - [.NET 8 SDK](https://dotnet.microsoft.com/download/dotnet/8.0)
-- MySQL Server (8.0 or higher)
+- **Azure SQL Database** or **SQL Server** (LocalDB, Express, or full version)
 - [Entity Framework Core Tools](https://docs.microsoft.com/en-us/ef/core/cli/dotnet)
 
 ## Setup Instructions
@@ -16,27 +16,38 @@
 dotnet tool install --global dotnet-ef
 ```
 
-### 2. Configure MySQL Database
+### 2. Configure Azure SQL / SQL Server Database
 
-Update the connection string in `appsettings.json` or `appsettings.Development.json`:
+**For Local Development (Windows - LocalDB):**
+No configuration needed! Default connection string is already set in `appsettings.Development.json`.
+
+**For Azure SQL Database:**
+Update the connection string in `appsettings.json`:
 
 ```json
 {
   "ConnectionStrings": {
-    "DefaultConnection": "Server=localhost;Port=3306;Database=treaty_desk_booking;User=your_username;Password=your_password;"
+    "DefaultConnection": "Server=tcp:your-server.database.windows.net,1433;Initial Catalog=treaty_desk_booking;User ID=your-username;Password=your-password;Encrypt=True;TrustServerCertificate=False;Connection Timeout=30;"
+  }
+}
+```
+
+**For SQL Server Express (local):**
+```json
+{
+  "ConnectionStrings": {
+    "DefaultConnection": "Server=localhost;Database=treaty_desk_booking;Trusted_Connection=True;MultipleActiveResultSets=true"
   }
 }
 ```
 
 ### 3. Create the Database
 
-You can create the database manually in MySQL:
+Entity Framework will create the database automatically when you run migrations.
 
-```sql
-CREATE DATABASE treaty_desk_booking CHARACTER SET utf8mb4 COLLATE utf8mb4_unicode_ci;
-```
+**For Azure SQL:** Create the database in Azure Portal first, then apply migrations.
 
-Or let Entity Framework create it automatically when you run migrations.
+See [AZURE_SQL_SETUP.md](AZURE_SQL_SETUP.md) for detailed setup instructions.
 
 ### 4. Run Database Migrations
 

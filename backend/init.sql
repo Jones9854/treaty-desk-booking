@@ -1,10 +1,16 @@
--- Initial database setup for Treaty Desk Booking
+-- Initial database setup for Treaty Desk Booking (SQL Server)
 -- This script runs automatically when using docker-compose
 
--- Ensure database uses UTF-8
-ALTER DATABASE treaty_desk_booking CHARACTER SET = utf8mb4 COLLATE = utf8mb4_unicode_ci;
+-- Create database if it doesn't exist
+IF NOT EXISTS (SELECT name FROM sys.databases WHERE name = 'treaty_desk_booking')
+BEGIN
+    CREATE DATABASE treaty_desk_booking
+    COLLATE SQL_Latin1_General_CP1_CI_AS;
+END
+GO
 
--- Grant privileges to treaty_user
-GRANT ALL PRIVILEGES ON treaty_desk_booking.* TO 'treaty_user'@'%';
-FLUSH PRIVILEGES;
+USE treaty_desk_booking;
+GO
+
+-- Database is ready for EF Core migrations
 

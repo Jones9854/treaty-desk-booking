@@ -1,26 +1,26 @@
 version: '3.8'
 
 services:
-  mysql:
-    image: mysql:8.0
-    container_name: treaty_desk_booking_mysql
+  sqlserver:
+    image: mcr.microsoft.com/mssql/server:2022-latest
+    container_name: treaty_desk_booking_sqlserver
     restart: unless-stopped
     environment:
-      MYSQL_ROOT_PASSWORD: password
-      MYSQL_DATABASE: treaty_desk_booking
-      MYSQL_USER: treaty_user
-      MYSQL_PASSWORD: treaty_password
+      ACCEPT_EULA: "Y"
+      SA_PASSWORD: "TreatyBooking@2024"
+      MSSQL_PID: "Express"
     ports:
-      - "3306:3306"
+      - "1433:1433"
     volumes:
-      - mysql_data:/var/lib/mysql
-      - ./init.sql:/docker-entrypoint-initdb.d/init.sql
+      - sqlserver_data:/var/opt/mssql
     healthcheck:
-      test: ["CMD", "mysqladmin", "ping", "-h", "localhost"]
-      timeout: 20s
+      test: ["CMD", "/opt/mssql-tools/bin/sqlcmd", "-S", "localhost", "-U", "sa", "-P", "TreatyBooking@2024", "-Q", "SELECT 1"]
+      interval: 10s
+      timeout: 3s
       retries: 10
+      start_period: 10s
 
 volumes:
-  mysql_data:
+  sqlserver_data:
     driver: local
 

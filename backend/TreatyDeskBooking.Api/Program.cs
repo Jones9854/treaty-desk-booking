@@ -9,12 +9,12 @@ var builder = WebApplication.CreateBuilder(args);
 builder.Services.AddEndpointsApiExplorer();
 builder.Services.AddSwaggerGen();
 
-// Configure MySQL connection
+// Configure Azure SQL / SQL Server connection
 var connectionString = builder.Configuration.GetConnectionString("DefaultConnection") 
-    ?? "Server=localhost;Port=3306;Database=treaty_desk_booking;User=root;Password=password;";
+    ?? "Server=(localdb)\\mssqllocaldb;Database=treaty_desk_booking;Trusted_Connection=True;MultipleActiveResultSets=true";
 
 builder.Services.AddDbContext<ApplicationDbContext>(options =>
-    options.UseMySql(connectionString, ServerVersion.AutoDetect(connectionString)));
+    options.UseSqlServer(connectionString));
 
 // Configure CORS
 builder.Services.AddCors(options =>
